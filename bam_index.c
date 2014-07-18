@@ -414,7 +414,8 @@ bam_index_t *bam_index_load_local(const char *_fn)
 	fnidx = (char*)calloc(strlen(fn) + 5, 1);
 	strcpy(fnidx, fn); strcat(fnidx, ".bai");
 	//fp = fopen(fnidx, "rb");
-	if (access(fnidx,F_OK) == -1) { // try "{base}.bai"
+	if (access(fnidx,F_OK) == -1) {
+	//if (fp == 0) { // try "{base}.bai"
 		free(fnidx);
 		fnidx = (char*)calloc(strlen(fn) + 5, 1);
 		//char *s = strstr(fn, "bam");
@@ -474,11 +475,20 @@ static void download_from_remote(const char *url)
 bam_index_t *bam_index_load(const char *fn)
 {
 	bam_index_t *idx;
+	knetFile *fp_remote;
 	idx = bam_index_load_local(fn);
 	if (idx == 0 && (strstr(fn, "ftp://") == fn || strstr(fn, "http://") == fn)) {
 		char *fnidx = calloc(strlen(fn) + 5, 1);
 		strcat(strcpy(fnidx, fn), ".bai");
 		fprintf(stderr, "[bam_index_load] attempting to download the remote index file.\n");
+		fp_remote = knet_open(fnidx, "r");
+		if (fp_remote == 0) {
+			fprintf(stderr,"[bam_index_load] .bam.bai file not present, trying .bai file.\n");
+			free(fnidx);
+			fnidx = (char*)calloc(strlen(fn) + 5, 1);
+			strcpy(fnidx, fn);
+                	fnidx[strlen(fn)-1] = 'i';	
+		}
 		download_from_remote(fnidx);
         free(fnidx);
 		idx = bam_index_load_local(fn);
